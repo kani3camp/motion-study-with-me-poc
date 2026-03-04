@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Motion Study With Me - POC</title>
+    <style>
+      body { margin: 0; overflow: hidden; }
+      #app {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        background: #1a1a1a;
+        color: #eee;
+        font-family: system-ui, sans-serif;
+      }
+      #main {
+        display: flex;
+        flex: 1;
+        gap: 1rem;
+        padding: 1rem;
+        align-items: flex-start;
+      }
+      #container { position: relative; flex-shrink: 0; }
+      #video, #canvas {
+        display: block;
+        transform: scaleX(-1);
+      }
+      #canvas { position: absolute; left: 0; top: 0; pointer-events: none; }
+      #scene3d {
+        flex: 1;
+        min-width: 320px;
+        min-height: 240px;
+        background: #1a1a2e;
+      }
+      #status { padding: 0.5rem 1rem; font-size: 0.9rem; }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="main">
+        <div id="container">
+          <video id="video" width="640" height="480" autoplay playsinline muted></video>
+          <canvas id="canvas" width="640" height="480"></canvas>
+        </div>
+        <div id="scene3d"></div>
+      </div>
+      <p id="status">カメラを起動しています…</p>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
