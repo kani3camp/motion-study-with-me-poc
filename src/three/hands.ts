@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import type { WorldLandmark } from "../config.js";
 import { mediaPipeToThree } from "./scene.js";
 
 const SPHERE_RADIUS = 0.022;
@@ -42,9 +43,9 @@ export class HandSpheres {
    * Pose が無いときだけ handedness で小さくずらして重なりを避ける。
    */
   update(
-    handsWorld: { x: number; y: number; z: number }[][],
+    handsWorld: WorldLandmark[][],
     handednessLabels?: string[],
-    poseWorld?: { x: number; y: number; z: number }[]
+    poseWorld?: WorldLandmark[]
   ) {
     const poseOk =
       poseWorld &&

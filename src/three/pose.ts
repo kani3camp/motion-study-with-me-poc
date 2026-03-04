@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import type { WorldLandmark } from "../config.js";
 import { mediaPipeToThree } from "./scene.js";
 
 const SPHERE_RADIUS = 0.018;
@@ -22,7 +23,7 @@ export class PoseSpheres {
     scene.add(this.group);
   }
 
-  update(poseWorld: { x: number; y: number; z: number }[]) {
+  update(poseWorld: WorldLandmark[]) {
     if (!poseWorld || poseWorld.length < 33) {
       this.meshes.forEach((m) => (m.visible = false));
       return;
