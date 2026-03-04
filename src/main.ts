@@ -11,6 +11,7 @@ import {
 } from "@mediapipe/tasks-vision";
 import { createScene } from "./three/scene.js";
 import { HandSpheres } from "./three/hands.js";
+import { PoseSpheres } from "./three/pose.js";
 
 const VIDEO_WIDTH = 640;
 const VIDEO_HEIGHT = 480;
@@ -67,19 +68,27 @@ async function main() {
 
   const drawingUtils = new DrawingUtils(canvasCtx);
 
-  // Phase 2: Three.js シーンと手の球体
+  // Phase 2: Three.js シーン（机・胴体・手）
   const { scene, camera, renderer } = createScene(scene3dEl);
+  const poseSpheres = new PoseSpheres(scene);
   const handSpheres = new HandSpheres(scene);
 
-  window.addEventListener("resize", () => {
+  const resizeScene = () => {
     const w = scene3dEl.clientWidth;
     const h = scene3dEl.clientHeight;
-    renderer.setSize(w, h);
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
+    if (w > 0 && h > 0) {
+      renderer.setSize(w, h);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+  };
+  window.addEventListener("resize", resizeScene);
+  // レイアウト確定後に 1 回リサイズ（#scene3d のサイズが 0 で初期化されていた場合の救済）
+  requestAnimationFrame(() => {
+    resizeScene();
   });
 
-  statusEl.textContent = "認識中… 左: カメラ+骨格 / 右: 3D 空間（手の球体+机）";
+  statusEl.textContent = "認識中… 左: カメラ+骨格 / 右: 3D 空間（胴体+手+机）";
 
   let frameCount = 0;
   let lastPoseWorld: { x: number; y: number; z: number }[] = [];
@@ -139,9 +148,12 @@ async function main() {
         lastHandsWorld = handResult.worldLandmarks.map((hand) =>
           hand.map((lm) => ({ x: lm.x, y: lm.y, z: lm.z }))
         );
+        const handednessLabels =
+          handResult.handedness?.map((cats) => cats[0]?.categoryName ?? "") ?? [];
 
-        // Phase 2: 手の球体を 3D 空間で更新
-        handSpheres.update(lastHandsWorld);
+        // Phase 2: 胴体（Pose）と手を 3D に更新（Pose 手首で手を共通座標に乗せ、重ならないように）
+        poseSpheres.update(lastPoseWorld);
+        handSpheres.update(lastHandsWorld, handednessLabels, lastPoseWorld);
 
         // 5 秒に 1 回だけコンソールにサンプル出力（ノイズ防止）
         if (frameCount % (5 * 30) === DETECT_INTERVAL) {

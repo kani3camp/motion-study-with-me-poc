@@ -1,8 +1,13 @@
 import * as THREE from "three";
 import { mediaPipeToThree } from "./scene.js";
 
-const SPHERE_RADIUS = 0.012;
+const SPHERE_RADIUS = 0.022;
 const SPHERE_COLOR = 0xffaa00;
+const SCALE = 2.5;
+
+/** MediaPipe Pose の手首インデックス（Hand を共通座標に置くためのアンカー） */
+export const POSE_LEFT_WRIST = 15;
+export const POSE_RIGHT_WRIST = 16;
 
 /** 手 1 本あたり 21 点の球体メッシュを作成する */
 function createHandSpheres(): THREE.Mesh[] {
@@ -32,10 +37,21 @@ export class HandSpheres {
   }
 
   /**
-   * worldLandmarks（手ごとの 21 点）で球体の位置を更新する。
-   * 座標は MediaPipe → Three.js に変換し、スケール 1 でそのままメートル扱い。
+   * Hand の world は「手ごとのローカル」なので重なる。
+   * Pose の左手首(15)・右手首(16)をアンカーにし、手の形は「手首からの相対」で同じ座標系に乗せる。
+   * Pose が無いときだけ handedness で小さくずらして重なりを避ける。
    */
-  update(handsWorld: { x: number; y: number; z: number }[][]) {
+  update(
+    handsWorld: { x: number; y: number; z: number }[][],
+    handednessLabels?: string[],
+    poseWorld?: { x: number; y: number; z: number }[]
+  ) {
+    const poseOk =
+      poseWorld &&
+      poseWorld.length > POSE_RIGHT_WRIST &&
+      poseWorld[POSE_LEFT_WRIST] != null &&
+      poseWorld[POSE_RIGHT_WRIST] != null;
+
     for (let h = 0; h < 2; h++) {
       const hand = handsWorld[h];
       const spheres = this.hands[h];
@@ -43,11 +59,34 @@ export class HandSpheres {
         spheres.forEach((s) => (s.visible = false));
         continue;
       }
+      const isLeft = handednessLabels?.[h]?.toLowerCase() === "left";
+      const wrist = hand[0]!;
+
+      let anchor: THREE.Vector3;
+      if (poseOk) {
+        const poseWrist = isLeft ? poseWorld![POSE_LEFT_WRIST]! : poseWorld![POSE_RIGHT_WRIST]!;
+        anchor = mediaPipeToThree(poseWrist, SCALE);
+      } else {
+        anchor = new THREE.Vector3(isLeft ? -0.2 : 0.2, 0, 0);
+      }
+
       for (let i = 0; i < Math.min(21, hand.length); i++) {
         const mesh = spheres[i];
         mesh.visible = true;
-        const pos = mediaPipeToThree(hand[i]!);
-        mesh.position.copy(pos);
+        if (poseOk) {
+          const rel = {
+            x: hand[i]!.x - wrist.x,
+            y: hand[i]!.y - wrist.y,
+            z: hand[i]!.z - wrist.z,
+          };
+          const pos = mediaPipeToThree(rel, SCALE);
+          pos.add(anchor);
+          mesh.position.copy(pos);
+        } else {
+          const pos = mediaPipeToThree(hand[i]!, SCALE);
+          pos.add(anchor);
+          mesh.position.copy(pos);
+        }
       }
     }
   }
