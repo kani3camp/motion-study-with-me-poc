@@ -106,6 +106,13 @@ async function main() {
         const handednessLabels =
           handResult.handedness?.map((cats) => cats[0]?.categoryName ?? "") ?? [];
 
+        // #region agent log
+        if (frameCount % 90 === 0) {
+          const wl = handResult.worldLandmarks;
+          fetch('http://127.0.0.1:7242/ingest/4d367f3e-86eb-4b41-903e-6f4561f424f0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'13700b'},body:JSON.stringify({sessionId:'13700b',location:'main.ts:handResult',message:'hand_result',data:{worldLandmarksLen:wl?.length??-1,lastHandsWorldLen:lastHandsWorld.length,hand0Len:lastHandsWorld[0]?.length??0,hand1Len:lastHandsWorld[1]?.length??0},timestamp:Date.now(),hypothesisId:'H1_H2'})}).catch(()=>{});
+        }
+        // #endregion
+
         poseSpheres.update(lastPoseWorld);
         handSpheres.update(lastHandsWorld, handednessLabels, lastPoseWorld);
 
