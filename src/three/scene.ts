@@ -25,19 +25,19 @@ export function createScene(container: HTMLElement) {
     h = FALLBACK_HEIGHT;
   }
   const aspect = w / h;
-  const camera = new THREE.PerspectiveCamera(50, aspect, 0.01, 10);
-  camera.position.set(0, 0.2, 1.2);
-  camera.lookAt(0, -0.25, 0); // 机（y=-0.4）が視野の中心付近に入るように
+  const camera = new THREE.PerspectiveCamera(30, aspect, 0.01, 20);
+  camera.position.set(0, 1.0, 3.0);
+  camera.lookAt(0, 0.8, 0);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(w, h);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   container.appendChild(renderer.domElement);
 
-  // ライト
-  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-  dirLight.position.set(1, 1, 1);
+  // ライト（VRM の MToon / PBR マテリアルに合わせて Math.PI 基準）
+  scene.add(new THREE.AmbientLight(0xffffff, Math.PI * 0.4));
+  const dirLight = new THREE.DirectionalLight(0xffffff, Math.PI);
+  dirLight.position.set(1, 1, 1).normalize();
   scene.add(dirLight);
 
   // 机（明るいグレーで視認しやすく）
