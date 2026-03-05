@@ -69,10 +69,6 @@ export class HandSpheres {
     handednessLabels?: string[],
     poseWorld?: WorldLandmark[]
   ) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/4d367f3e-86eb-4b41-903e-6f4561f424f0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'13700b'},body:JSON.stringify({sessionId:'13700b',location:'hands.ts:update',message:'hands_update_input',data:{handsWorldLen:handsWorld?.length??-1,h0Len:handsWorld?.[0]?.length??-1,h1Len:handsWorld?.[1]?.length??-1},timestamp:Date.now(),hypothesisId:'H3'})}).catch(()=>{});
-    // #endregion
-
     const poseOk =
       poseWorld &&
       poseWorld.length > POSE_RIGHT_WRIST &&
@@ -137,12 +133,6 @@ export class HandSpheres {
       posAttr.needsUpdate = true;
       lineSegments.geometry.computeBoundingSphere();
       lineSegments.visible = true;
-      // #region agent log
-      if (spheres[0]) {
-        const p = spheres[0].position;
-        fetch('http://127.0.0.1:7242/ingest/4d367f3e-86eb-4b41-903e-6f4561f424f0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'13700b'},body:JSON.stringify({sessionId:'13700b',location:'hands.ts:visible',message:'hand_sphere_visible',data:{handIndex:h,visible:spheres[0].visible,x:p.x,y:p.y,z:p.z,poseOk,groupVisible:this.group.visible,hasParent:!!this.group.parent},timestamp:Date.now(),hypothesisId:'H4_H5'})}).catch(()=>{});
-      }
-      // #endregion
     }
   }
 }
