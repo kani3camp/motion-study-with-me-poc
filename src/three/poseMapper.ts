@@ -24,6 +24,9 @@ const MP_RIGHT_WRIST = 16;
 const MP_LEFT_HIP = 23;
 const MP_RIGHT_HIP = 24;
 
+/** applyPoseToVRM で必要な最小ランドマーク数（最大インデックス MP_RIGHT_HIP=24 + 1） */
+const MIN_POSE_LANDMARKS = MP_RIGHT_HIP + 1;
+
 /** MediaPipe → Three.js 座標変換 */
 function mp(lm: WorldLandmark): THREE.Vector3 {
   return new THREE.Vector3(-lm.x, -lm.y, lm.z);
@@ -47,8 +50,12 @@ function clamp(v: number, min: number, max: number): number {
 }
 
 /**
- * 2 点間のオイラー回転を計算する（kalidokit 方式）
- * XZ 平面→X回転, ZY 平面→Y回転, XY 平面→Z回転
+ * 2 点間の方向を 3 つの 2D 平面に射影し、各平面での角度をオイラー回転として返す。
+ * kalidokit (MIT) の Vector.findRotation と同等のアルゴリズム。
+ *
+ * - x: ZX 平面への射影角 — 水平面(Z)と横軸(X)での回り込み
+ * - y: ZY 平面への射影角 — 奥行き(Z)と縦軸(Y)での仰俯角
+ * - z: XY 平面への射影角 — 正面から見た傾き（ロール）
  */
 function findRotation(
   a: THREE.Vector3,
@@ -79,7 +86,7 @@ function angleBetween3Points(
  * 上半身のポーズを VRM ボーンに適用する
  */
 export function applyPoseToVRM(vrm: VRM, pose: WorldLandmark[]): void {
-  if (!pose || pose.length < 25) return;
+  if (!pose || pose.length < MIN_POSE_LANDMARKS) return;
 
   const humanoid = vrm.humanoid;
 
@@ -98,12 +105,7 @@ export function applyPoseToVRM(vrm: VRM, pose: WorldLandmark[]): void {
   const shoulderRot = findRotation(p[MP_LEFT_SHOULDER], p[MP_RIGHT_SHOULDER]);
 
   const spineRotY = normalizeRad(shoulderRot.y);
-  const spineRotZ = (() => {
-    let z = shoulderRot.z;
-    if (z > 0) z = 1 - z;
-    if (z < 0) z = -1 - z;
-    return z;
-  })();
+  const spineRotZ = normalizeRad(shoulderRot.z);
 
   const spineForward = shoulderCenter.clone().sub(hipCenter).normalize();
   const spineRotX = Math.asin(clamp(-spineForward.z, -1, 1)) * 0.5;
@@ -180,10 +182,10 @@ function applyArm(
     lowerNode.rotation.set(laX, laY, laZ);
   }
 
-  const wristRot = findRotation(
-    p[wristIdx],
-    p[wristIdx].clone().lerp(p[elbowIdx], -0.3)
-  );
+  // elbow→wrist ベクトルの延長線上に仮想点を生成し、手の向きを推定する
+  const wristDirection = new THREE.Vector3().subVectors(p[wristIdx], p[elbowIdx]);
+  const wristForward = p[wristIdx].clone().addScaledVector(wristDirection, 0.3);
+  const wristRot = findRotation(p[wristIdx], wristForward);
   const handNode = humanoid.getNormalizedBoneNode(handBoneName);
   if (handNode) {
     handNode.rotation.set(0, clamp(wristRot.z * 2, -0.6, 0.6), 0);

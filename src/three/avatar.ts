@@ -22,18 +22,27 @@ export async function loadVRM(
     loader.load(
       url,
       (gltf) => {
-        const vrm = gltf.userData.vrm as VRM;
+        const vrm = gltf.userData.vrm as VRM | undefined;
 
-        VRMUtils.removeUnnecessaryVertices(gltf.scene);
-        VRMUtils.combineSkeletons(gltf.scene);
-        VRMUtils.combineMorphs(vrm);
+        if (!vrm) {
+          reject(new Error("Loaded GLTF does not contain a valid VRM avatar."));
+          return;
+        }
 
-        vrm.scene.traverse((obj) => {
-          obj.frustumCulled = false;
-        });
+        try {
+          VRMUtils.removeUnnecessaryVertices(gltf.scene);
+          VRMUtils.combineSkeletons(gltf.scene);
+          VRMUtils.combineMorphs(vrm);
 
-        scene.add(vrm.scene);
-        resolve(vrm);
+          vrm.scene.traverse((obj) => {
+            obj.frustumCulled = false;
+          });
+
+          scene.add(vrm.scene);
+          resolve(vrm);
+        } catch (error) {
+          reject(error);
+        }
       },
       (progress) => {
         if (progress.total > 0) {

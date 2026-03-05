@@ -63,19 +63,6 @@ async function main() {
   const clock = new THREE.Clock();
   setupResize(scene3dEl, renderer, cam3d);
 
-  // VRM アバターの読み込み
-  let currentVrm: VRM | null = null;
-  statusEl.textContent = "VRM アバターを読み込み中…";
-  loadVRM(scene)
-    .then((vrm) => {
-      currentVrm = vrm;
-      console.log("[VRM] Avatar loaded", vrm);
-      statusEl.textContent = cameraReady
-        ? status.ready
-        : "VRM 読み込み完了（カメラなし）";
-    })
-    .catch((err) => console.warn("[VRM] Failed to load avatar:", err));
-
   // カメラ・MediaPipe の初期化（失敗しても 3D シーンは続行）
   let cameraReady = false;
   let poseLandmarker: Awaited<ReturnType<typeof loadLandmarkers>>["poseLandmarker"] | null = null;
@@ -92,14 +79,27 @@ async function main() {
     poseLandmarker = landmarkers.poseLandmarker;
     handLandmarker = landmarkers.handLandmarker;
     drawingUtils = new DrawingUtils(ctx);
-
-    statusEl.textContent = status.ready;
   } catch (err) {
     console.warn("[Camera] Initialization failed:", err);
-    statusEl.textContent = currentVrm
-      ? "VRM 読み込み完了（カメラなし）"
-      : "VRM 読み込み中…（カメラなし）";
   }
+
+  // VRM アバターの読み込み（カメラ初期化の結果が確定した後に開始）
+  let currentVrm: VRM | null = null;
+  statusEl.textContent = "VRM アバターを読み込み中…";
+  loadVRM(scene)
+    .then((vrm) => {
+      currentVrm = vrm;
+      console.log("[VRM] Avatar loaded", vrm);
+      statusEl.textContent = cameraReady
+        ? status.ready
+        : "VRM 読み込み完了（カメラなし）";
+    })
+    .catch((err) => {
+      console.warn("[VRM] Failed to load avatar:", err);
+      statusEl.textContent = cameraReady
+        ? status.ready
+        : "VRM 読み込み失敗";
+    });
 
   let frameCount = 0;
   let lastPoseWorld: WorldLandmark[] = [];
@@ -129,13 +129,6 @@ async function main() {
           );
           const handednessLabels =
             handResult.handedness?.map((cats) => cats[0]?.categoryName ?? "") ?? [];
-
-          // #region agent log
-          if (frameCount % 90 === 0) {
-            const wl = handResult.worldLandmarks;
-            fetch('http://127.0.0.1:7242/ingest/4d367f3e-86eb-4b41-903e-6f4561f424f0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'13700b'},body:JSON.stringify({sessionId:'13700b',location:'main.ts:handResult',message:'hand_result',data:{worldLandmarksLen:wl?.length??-1,lastHandsWorldLen:lastHandsWorld.length,hand0Len:lastHandsWorld[0]?.length??0,hand1Len:lastHandsWorld[1]?.length??0},timestamp:Date.now(),hypothesisId:'H1_H2'})}).catch(()=>{});
-          }
-          // #endregion
 
           poseSpheres.update(lastPoseWorld);
           handSpheres.update(lastHandsWorld, handednessLabels, lastPoseWorld);
